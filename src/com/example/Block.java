@@ -10,41 +10,61 @@ public class Block implements Serializable{
     private Header header;
     private Transaction tranx;
 
-    //overloaded constructor
     public Block( String previousHash ) {
         this.header = new Header();
         this.header.previousHash = previousHash;
         this.header.timeStamp = new Timestamp( System.currentTimeMillis() ).getTime();
-        byte[] blockBytes = getBytes( this );
-        this.header.currentHash = Hasher.hash( blockBytes, "SHA-256" );
+        generateHashValue();
     }
 
     public void setTranx(Transaction tranx) {
         this.tranx = tranx;
+        generateMerkleRoot();
     }
 
     public Header getHeader() {
         return header;
     }
 
+    public void generateMerkleRoot(){
+        MerkleTree merkleTree = MerkleTree.getInstance(this.tranx.tranxLst);
+        merkleTree.build();
+        this.header.merkleRoot = merkleTree.getRoot();
+        generateHashValue();
+    }
+
+    public void generateHashValue(){
+        byte[] blockBytes = getBytes( this );
+        this.header.currentHash = Hasher.hash( blockBytes, "SHA-256" );
+    }
+
+    private byte[] getBytes( Block block ){
+        try( ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ObjectOutputStream out = new ObjectOutputStream( baos );
+        ) {
+            out.writeObject( block );
+            return baos.toByteArray();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "Block [header=" + header + ", tranx=" + tranx + "]";
+    }
+
     public class Header implements Serializable {
-        // define properties
+
         private int index;
         private String currentHash;
         private String previousHash;
         private long timeStamp;
         private String merkleRoot;
 
-        //getset methods
-
         public int getIndex() {
             return index;
-        }
-
-        @Override
-        public String toString() {
-            return "Header [index=" + index + ", currentHash=" + currentHash + ", previousHash=" + previousHash
-                    + ", timeStamp=" + timeStamp + "]";
         }
 
         public void setIndex(int index) {
@@ -74,23 +94,11 @@ public class Block implements Serializable{
         public void setTimeStamp(long timeStamp) {
             this.timeStamp = timeStamp;
         }
-    }
 
-    //getBytes( Block ) : byte[]
-    private byte[] getBytes( Block block ){
-        try( ByteArrayOutputStream baos = new ByteArrayOutputStream();
-             ObjectOutputStream out = new ObjectOutputStream( baos );
-        ) {
-            out.writeObject( block );
-            return baos.toByteArray();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+        @Override
+        public String toString() {
+            return "Header [index=" + index + ", currentHash=" + currentHash + ", previousHash=" + previousHash
+                    + ", timeStamp=" + timeStamp + "]";
         }
-    }
-
-    @Override
-    public String toString() {
-        return "Block [header=" + header + ", tranx=" + tranx + "]";
     }
 }
